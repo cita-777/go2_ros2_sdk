@@ -97,8 +97,8 @@ build_system() {
     
     # 运行 rosdep
     print_info "安装 ROS 依赖项..."
-    rosdep update
-    rosdep install --from-paths src --ignore-src -r -y
+    # rosdep update
+    # rosdep install --from-paths src --ignore-src -r -y
     
     # 构建
     print_info "开始构建..."
