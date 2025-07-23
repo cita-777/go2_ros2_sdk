@@ -39,11 +39,16 @@ def generate_launch_description():
     with_foxglove = LaunchConfiguration('foxglove', default='true')
     with_joystick = LaunchConfiguration('joystick', default='true')
     with_teleop = LaunchConfiguration('teleop', default='true')
+    lidar_type = LaunchConfiguration('lidar_type', default='builtin')  # 'builtin' or 'hesai'
 
     robot_token = os.getenv('ROBOT_TOKEN', '') # how does this work for multiple robots?
     robot_ip = os.getenv('ROBOT_IP', '')
     robot_ip_lst = robot_ip.replace(" ", "").split(",")
     print("IP list:", robot_ip_lst)
+
+    # Check for LiDAR type from environment variable
+    lidar_type_env = os.getenv('LIDAR_TYPE', 'builtin')  # 'builtin' or 'hesai'
+    print(f"LiDAR type: {lidar_type_env}")
 
 
     # these are debug only
@@ -174,19 +179,55 @@ def generate_launch_description():
                 ),
             )
 
+    # Create conditional node lists based on LiDAR type
+    lidar_nodes = []
+
+    if lidar_type_env == 'hesai':
+        # Use Hesai LiDAR
+        hesai_config = os.path.join(
+            get_package_share_directory('hesai_ros_driver'),
+            'config',
+            'go2_config.yaml'
+        )
+        lidar_nodes.append(
+            Node(
+                package='hesai_ros_driver',
+                executable='hesai_ros_driver_node',
+                name='hesai_lidar_driver',
+                output='screen',
+                parameters=[hesai_config],
+                remappings=[
+                    ('/lidar_points', '/point_cloud2'),
+                ]
+            )
+        )
+        # Still need the point cloud aggregation node for map saving
+        lidar_nodes.append(
+            Node(
+                package='go2_robot_sdk',
+                executable='lidar_to_pointcloud',
+                parameters=[{'robot_ip_lst': robot_ip_lst, 'map_name': map_name, 'map_save': save_map, 'lidar_type': 'hesai'}],
+            )
+        )
+    else:
+        # Use built-in LiDAR (original behavior)
+        lidar_nodes.extend([
+            Node(
+                package='go2_robot_sdk',
+                executable='go2_driver_node',
+                parameters=[{'robot_ip': robot_ip, 'token': robot_token, "conn_type": conn_type}],
+            ),
+            Node(
+                package='go2_robot_sdk',
+                executable='lidar_to_pointcloud',
+                parameters=[{'robot_ip_lst': robot_ip_lst, 'map_name': map_name, 'map_save': save_map, 'lidar_type': 'builtin'}],
+            ),
+        ])
+
     return LaunchDescription([
 
         *urdf_launch_nodes,
-        Node(
-            package='go2_robot_sdk',
-            executable='go2_driver_node',
-            parameters=[{'robot_ip': robot_ip, 'token': robot_token, "conn_type": conn_type}],
-        ),
-        Node(
-            package='go2_robot_sdk',
-            executable='lidar_to_pointcloud',
-            parameters=[{'robot_ip_lst': robot_ip_lst, 'map_name': map_name, 'map_save': save_map}],
-        ),
+        *lidar_nodes,
         Node(
             package='rviz2',
             namespace='',

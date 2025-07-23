@@ -36,6 +36,7 @@ class LidarToPointCloud(Node):
         self.declare_parameter('robot_ip_lst')
         self.declare_parameter('map_name')
         self.declare_parameter('map_save')
+        self.declare_parameter('lidar_type', 'builtin')  # 'builtin' or 'hesai'
 
         self.robot_ip_lst = self.get_parameter(
             'robot_ip_lst').get_parameter_value().string_array_value
@@ -43,6 +44,8 @@ class LidarToPointCloud(Node):
             'map_name').get_parameter_value().string_value
         self.save_map = self.get_parameter(
             'map_save').get_parameter_value().string_value
+        self.lidar_type = self.get_parameter(
+            'lidar_type').get_parameter_value().string_value
 
         self.points_len = 0
         self.map_full_name = f'{self.map_name}.ply'
@@ -53,24 +56,33 @@ class LidarToPointCloud(Node):
 
         self.conn_mode = "single" if len(self.robot_ip_lst) == 1 else "multi"
 
-        if self.conn_mode == 'single':
-
+        # Configure subscription based on LiDAR type
+        if self.lidar_type == 'hesai':
+            # For Hesai LiDAR, subscribe directly to the point cloud topic
             self.subscription = self.create_subscription(
                 PointCloud2,
-                '/robot0/point_cloud2',
+                '/point_cloud2',
                 self.lidar_callback,
                 10
             )
-
         else:
-            for i in range(len(self.robot_ip_lst)):
-                # Subscribe to the PointCloud2 topic
+            # Original behavior for built-in LiDAR
+            if self.conn_mode == 'single':
                 self.subscription = self.create_subscription(
                     PointCloud2,
-                    f'/robot{i}/point_cloud2',
+                    '/robot0/point_cloud2',
                     self.lidar_callback,
                     10
                 )
+            else:
+                for i in range(len(self.robot_ip_lst)):
+                    # Subscribe to the PointCloud2 topic
+                    self.subscription = self.create_subscription(
+                        PointCloud2,
+                        f'/robot{i}/point_cloud2',
+                        self.lidar_callback,
+                        10
+                    )
         self.points = set()
         self.publisher = self.create_publisher(
             PointCloud2, '/pointcloud/deque', 10)

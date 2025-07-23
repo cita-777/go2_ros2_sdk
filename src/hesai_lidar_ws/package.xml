@@ -2,7 +2,7 @@
 <package format="3">
   <name>hesai_ros_driver</name>
   <version>1.5.0</version>
-  <description>The hesai_ros_driver_node package</description>
+  <description>Hesai LiDAR ROS2 driver integrated with Go2 robot system</description>
   <maintainer email="zhangyu@hesaitech.com">hesaiwuxiaozhou</maintainer>
   <license>BSD</license>
   
