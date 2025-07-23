@@ -4,7 +4,7 @@ git clone --recurse-submodules https://github.com/cita-777/go2_ros2_sdk.git
 
 降级numpy
 
-pip install "numpy<2"
+pip install numpy==1.24.4
 
 编译
 
